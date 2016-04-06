@@ -9,8 +9,8 @@ use GearmanWorker;
 
 class SucController extends \yii\console\Controller
 {
-  public $csrf_token='1895ac80-2326-4af8-a79b-0160017c1eab';
-  public $cookie='WMONID=GSllI5g9DRW; SRM_ID=YYzpwSGuH4Tb6jsJYPADlszzniktM6O1pex0VAOzFBQPlsZ6w3Yn!879765992!1848779880; org.springframework.web.servlet.theme.CookieThemeResolver.THEME=default';
+  public $csrf_token='e58f8b2d-76cf-47a1-889a-f6a8ba75cc02';
+  public $cookie='WMONID=GSllI5g9DRW; SRM_ID=8Wfqaqr0ucR4q1-JYepLixOG9nYeIkNITtXXMi3FYbbBK0a9J5kx!1292869029!NONE; org.springframework.web.servlet.theme.CookieThemeResolver.THEME=default';
 
   public function actionSearch(){
     $worker=new GearmanWorker();
@@ -27,6 +27,9 @@ class SucController extends \yii\console\Controller
     while($worker->work());
   }
 
+  /**
+   * 낙찰검색
+   */
   public function kepco_suc_search($job){
     echo $job->workload(),PHP_EOL;
     $workload=Json::decode($job->workload());
@@ -49,6 +52,8 @@ class SucController extends \yii\console\Controller
       ],
     ]);
 
+    $limit=100;
+
     $response=$httpClient->request('POST','/router',[
       'json'=>[
         'action'=>'smartsuit.ui.etnajs.pro.rfx.sp.OpenInfoDataListController',
@@ -60,7 +65,7 @@ class SucController extends \yii\console\Controller
             'companyId'=>'ALL',
             'fromNoticeDate'=>$workload['fromNoticeDate'].'T00:00:00',
             'toNoticeDate'=>$workload['toNoticeDate'].'T23:59:59',
-            'limit'=>100,
+            'limit'=>$limit,
             'page'=>1,
             'start'=>0,
           ],
@@ -74,7 +79,72 @@ class SucController extends \yii\console\Controller
     echo Console::ansiFormat('[검색건수] : '.$total,[Console::FG_YELLOW]),PHP_EOL;
     $rows=$json[0]['result']['records'];
     foreach($rows as $row){
-      echo ' - '.$row['id'].'/'.$row['name'],PHP_EOL;
+      sleep(1);
+      echo ' - '.$row['id'].'/'
+                .$row['bidResultStateInOpenInfoData'].'/' //입찰결과
+                //.$row['companyId'].'/' //회사이름
+                .$row['purchaseType'].'/' //구매유형
+                .$row['no'].'/' //공고번호
+                .$row['revision'].'/' //공고차수
+                .$row['bidRevision'].'/' //입찰차수
+                .$row['name'].'/' //공고명
+                //.$row['placeName'].'/' //공고부서
+                //.$row['noticeDate'].'/' //공고일자
+                //.$row['competitionType'].'/' //계약방법
+                //.$row['bidType'].'/' //낙찰자선정
+                //.$row['noticeType'].'/' //공고종류
+                //.$row['bidAttendRequestCloseDateTime'].'/' //입찰참가 마감일시
+                //.$row['beginDateTime'].'/' //입찰서 제출 개시일시
+                //.$row['endDateTime'].'/' //입찰서 제출 마감일시
+                ,PHP_EOL;
+    }
+
+    $lastPage=ceil($total/$limit);
+    for($page=2; $page<=$lastPage; $page++){
+      $start=($limit*$page)-$limit;
+      $response=$httpClient->request('POST','/router',[
+        'json'=>[
+          'action'=>'smartsuit.ui.etnajs.pro.rfx.sp.OpenInfoDataListController',
+          'method'=>'findOpenInfoDataBidList',
+          'tid'=>16,
+          'type'=>'rpc',
+          'data'=>[
+            [
+              'companyId'=>'ALL',
+              'fromNoticeDate'=>$workload['fromNoticeDate'].'T00:00:00',
+              'toNoticeDate'=>$workload['toNoticeDate'].'T23:59:59',
+              'limit'=>$limit,
+              'page'=>$page,
+              'start'=>$start,
+            ],
+          ],
+        ],
+      ]);
+      $body=$response->getBody();
+      $json=Json::decode($body);
+
+      $rows=$json[0]['result']['records'];
+      echo ' > page : '.$page.' / '.$lastPage,PHP_EOL;
+      foreach($rows as $row){
+        sleep(1);
+        echo ' - '.$row['id'].'/'
+                  .$row['bidResultStateInOpenInfoData'].'/' //입찰결과
+                  //.$row['companyId'].'/' //회사이름
+                  .$row['purchaseType'].'/' //구매유형
+                  .$row['no'].'/' //공고번호
+                  .$row['revision'].'/' //공고차수
+                  .$row['bidRevision'].'/' //입찰차수
+                  .$row['name'].'/' //공고명
+                  //.$row['placeName'].'/' //공고부서
+                  //.$row['noticeDate'].'/' //공고일자
+                  //.$row['competitionType'].'/' //계약방법
+                  //.$row['bidType'].'/' //낙찰자선정
+                  //.$row['noticeType'].'/' //공고종류
+                  //.$row['bidAttendRequestCloseDateTime'].'/' //입찰참가 마감일시
+                  //.$row['beginDateTime'].'/' //입찰서 제출 개시일시
+                  //.$row['endDateTime'].'/' //입찰서 제출 마감일시
+                  ,PHP_EOL;
+      }
     }
   }
 
@@ -156,7 +226,7 @@ class SucController extends \yii\console\Controller
       'json'=>[
         [
           'action'=>'smartsuit.ui.etnajs.pro.rfx.sp.BidDetailController',
-          'method'=>'findBidDetail',
+          'method'=>'findBidBasicInfo',
           'tid'=>181,
           'type'=>'rpc',
           'data'=>[$workload['id']],
@@ -166,15 +236,16 @@ class SucController extends \yii\console\Controller
     $body=$response->getBody();
     $json=Json::decode($body);
 
+    $bidData=$json[0]['result'];
+    echo ' > 예정가격 : '.$bidData['estimatedAmount'],PHP_EOL;
+
     $response=$httpClient->request('POST','/router',[
       'json'=>[
         'action'=>'smartsuit.ui.etnajs.pro.rfx.OpenInfoDataDetailController',
         'method'=>'findOpenInfoDataDetail',
         'tid'=>182,
         'type'=>'rpc',
-        'data'=>[
-          $json[0]['result'],
-        ],
+        'data'=>[$bidData],
       ],
     ]);
     $body=$response->getBody();
@@ -193,6 +264,84 @@ class SucController extends \yii\console\Controller
                 .$row['lotteryNum'].','
                 .$row['note'],PHP_EOL;
     }
+
+    $multispare=$this->getMultispare($httpClient,$workload['id']);
+    echo ' > 추첨번호 : '.join('-',$multispare['selms']).', 복수예가 : '.join('/',$multispare['multispares']),PHP_EOL;
+  }
+
+  /**
+   * 복수예가
+   */
+  public function getMultispare($httpClient,$id){
+    $response=$httpClient->request('POST','/router',[
+      'json'=>[
+        [
+          'action'=>'smartsuit.ui.etnajs.pro.rfx.BidDetailController',
+          'method'=>'findByIdBidMultiEstimatedPriceList',
+          'tid'=>21,
+          'type'=>'rpc',
+          'data'=>[
+            [
+              'bidId'=>$id,
+              'limit'=>100,
+              'page'=>1,
+              'start'=>0,
+              'type'=>'select',
+            ],
+          ],
+        ],
+
+        [
+          'action'=>'smartsuit.ui.etnajs.pro.rfx.BidDetailController',
+          'method'=>'findByIdBidMultiEstimatedPriceList',
+          'tid'=>22,
+          'type'=>'rpc',
+          'data'=>[
+            [
+              'bidId'=>$id,
+              'limit'=>100,
+              'page'=>1,
+              'start'=>0,
+              'type'=>'noneSelect',
+            ],
+          ],
+        ],
+      ],
+    ]);
+    $body=$response->getBody();
+    $json=Json::decode($body);
+
+    foreach($json as $row){
+      switch($row['tid']){
+      case 21:
+        $select=$row['result'];
+        break;
+      case 22:
+        $noneSelect=$row['result'];
+        break;
+      }
+    }
+    
+    $multispares=[];
+    $selms=[];
+
+    if(is_array($select)){
+      foreach($select as $row){
+        $multispares[$row['no']]=$row['price'];
+        $selms[]=$row['no'];
+      }
+    }
+
+    if(is_array($noneSelect)){
+      foreach($noneSelect as $row){
+        $multispares[$row['no']]=$row['price'];
+      }
+    }
+
+    return [
+      'selms'=>$selms,
+      'multispares'=>$multispares,
+    ];
   }
 }
 
