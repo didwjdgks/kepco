@@ -9,8 +9,8 @@ use GearmanWorker;
 
 class SucController extends \yii\console\Controller
 {
-  public $csrf_token='e58f8b2d-76cf-47a1-889a-f6a8ba75cc02';
-  public $cookie='WMONID=GSllI5g9DRW; SRM_ID=8Wfqaqr0ucR4q1-JYepLixOG9nYeIkNITtXXMi3FYbbBK0a9J5kx!1292869029!NONE; org.springframework.web.servlet.theme.CookieThemeResolver.THEME=default';
+  public $csrf_token='5d55a19a-40d6-48c9-b9ac-906e5e54fc1d';
+  public $cookie='WMONID=GSllI5g9DRW; SRM_ID=vr_uAKafPkTwohcRsD6hs3rtrOP0MsQhNb2PQnhfnEz2ZWsUsQmQ!-2096506436!NONE; org.springframework.web.servlet.theme.CookieThemeResolver.THEME=default; pop23139=done';
 
   public function actionSearch(){
     $worker=new GearmanWorker();
@@ -52,6 +52,14 @@ class SucController extends \yii\console\Controller
       ],
     ]);
 
+    if(!empty($workload['recently'])){
+      $fromNoticeDate=date('Y-m-d',strtotime($workload['recently']));
+      $toNoticeDate=date('Y-m-d');
+    }else{
+      $fromNoticeDate=$workload['fromNoticeDate'];
+      $toNoticeDate=$workload['toNoticeDate'];
+    }
+
     $limit=100;
 
     $response=$httpClient->request('POST','/router',[
@@ -63,8 +71,8 @@ class SucController extends \yii\console\Controller
         'data'=>[
           [
             'companyId'=>'ALL',
-            'fromNoticeDate'=>$workload['fromNoticeDate'].'T00:00:00',
-            'toNoticeDate'=>$workload['toNoticeDate'].'T23:59:59',
+            'fromNoticeDate'=>$fromNoticeDate.'T00:00:00',
+            'toNoticeDate'=>$toNoticeDate.'T23:59:59',
             'limit'=>$limit,
             'page'=>1,
             'start'=>0,
@@ -111,8 +119,8 @@ class SucController extends \yii\console\Controller
           'data'=>[
             [
               'companyId'=>'ALL',
-              'fromNoticeDate'=>$workload['fromNoticeDate'].'T00:00:00',
-              'toNoticeDate'=>$workload['toNoticeDate'].'T23:59:59',
+              'fromNoticeDate'=>$fromNoticeDate.'T00:00:00',
+              'toNoticeDate'=>$toNoticeDate.'T23:59:59',
               'limit'=>$limit,
               'page'=>$page,
               'start'=>$start,
