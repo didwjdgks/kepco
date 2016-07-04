@@ -6,12 +6,15 @@ use yii\di\Instance;
 
 class Module extends \yii\base\Module
 {
-  public $i2db='i2db';
+  public $db='i2db';
+
+  public $http;
 
   public function init(){
     parent::init();
 
-    $this->i2db=Instance::ensure($this->i2db,Connection::className());
+    $this->db=Instance::ensure($this->db,Connection::className());
+    $this->http=new Http;
   }
 }
 
